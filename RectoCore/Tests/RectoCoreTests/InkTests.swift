@@ -6,7 +6,7 @@ final class ReadingLineTests: XCTestCase {
 
     /// The saved line really is at the top of the pane in the current layout.
     func assertLineAtTop(_ r: ReaderState, _ pos: ReadingPosition, file: StaticString = #filePath, line: UInt = #line) {
-        let rect = r.layout.stripRect(ofLine: text.lines[pos.lineID])!
+        let rect = r.layout.stripRect(ofLine: text.lines[pos.lineID!])!
         let expected = rect.minY + pos.fraction * rect.height
         XCTAssertEqual(r.scrollY, max(0, expected), accuracy: 0.001, file: file, line: line)
         // And the line is on screen.
@@ -255,5 +255,37 @@ final class StoreTests: XCTestCase {
     func testRefusesAFileFromANewerVersion() throws {
         var rec = PaperRecord(); rec.version = 99
         XCTAssertThrowsError(try PaperRecord.decode(rec.encoded()))
+    }
+}
+
+final class ReadingFallbackTests: XCTestCase {
+    /// A scanned paper: pages but no text layer.
+    func testScannedPaperKeepsItsPlaceByPage() throws {
+        let scan = DocumentText(pageSizes: Array(repeating: Fixture.pageSize, count: 4), linesPerPage: [])
+        var r = ReaderState(text: scan, environment: .duoClosed)
+        r.scroll(to: 1500)
+        let pos = try XCTUnwrap(r.position)
+        XCTAssertNil(pos.lineID)
+        let before = pos.pageY
+        for env in [WindowEnvironment.duoOpen, .iPadLandscape, .duoLaptop, .duoClosed] {
+            r.setEnvironment(env)
+            // Same place on the same printed page.
+            let piece = try XCTUnwrap(r.layout.pieces.first { $0.page == pos.page })
+            XCTAssertEqual(piece.toPage(CGPoint(x: 0, y: r.scrollY)).y, before, accuracy: 0.01, "\(env.size)")
+        }
+    }
+
+    /// The PDF was replaced by a different one: the saved line no longer matches, so use the page place.
+    func testChangedFileFallsBackToThePage() throws {
+        let text = Fixture.paper()
+        var r = ReaderState(text: text, environment: .duoOpen)
+        r.scroll(to: 1800)
+        var record = r.record
+        record.position?.lineText = "words that are not there any more"
+        let reopened = ReaderState(text: text, record: record, environment: .duoOpen)
+        let pos = try XCTUnwrap(record.position)
+        XCTAssertEqual(reopened.scrollY, try XCTUnwrap(pos.pageScrollY(layout: reopened.layout)), accuracy: 0.01)
+        // And it lands on the right page.
+        XCTAssertEqual(reopened.layout.piece(atStrip: CGPoint(x: 1, y: reopened.scrollY + 1))?.page, pos.page)
     }
 }

@@ -2,7 +2,7 @@
 
 Goal: prove the reading and margin engine before building screens on it.
 
-**Result: 38 of 38 checks pass** (`swift test` in `RectoCore/`, Swift 6.1 on Linux).
+**Result: 40 of 40 checks pass** (38 on 26 October, plus 2 added on 28 October) (`swift test` in `RectoCore/`, Swift 6.1 on Linux).
 
 | Area | What was checked | Result |
 | --- | --- | --- |
@@ -18,6 +18,7 @@ Goal: prove the reading and margin engine before building screens on it.
 | Undo | A fold-crossing stroke undoes as one; one eraser pass is one undo; separate paper and notebook histories | Pass after a fix |
 | Highlighter | Snaps to the words crossed; misses empty space | Pass |
 | Notebook | Quote cards avoid ink and earlier cards, start a new page when full, never move | Pass |
+| Reading line | Scanned paper with no text keeps its place by page; a replaced PDF falls back to the page place | Pass (added 28 Oct) |
 | Saving | Everything round-trips; a file from a newer app version is refused | Pass |
 
 ## What the tests caught and changed

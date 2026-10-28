@@ -62,7 +62,7 @@ final class RealPaperTests: XCTestCase {
             let pos = r.position!
             for env in [WindowEnvironment.duoOpen, .duoLaptop, .iPadLandscape, .duoClosed] {
                 r.setEnvironment(env)
-                let rect = r.layout.stripRect(ofLine: text.lines[pos.lineID])!
+                let rect = r.layout.stripRect(ofLine: text.lines[pos.lineID!])!
                 XCTAssertEqual(r.scrollY, rect.minY + pos.fraction * rect.height, accuracy: 0.001)
             }
         }

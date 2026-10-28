@@ -34,8 +34,8 @@ The app opens on a library with a sample paper. Inside a paper:
   Two pages side by side when the fold runs down the middle or the window is at least 860 points wide;
   paper above notes when the fold runs across (laptop pose, held tall); one page otherwise.
 - Columns view below 600 points of paper width, Page view above, unless the reader picked one (kept per paper).
-- The reading line is a sentence and line plus how far into the line the top of the pane sits.
-  It is taken only when the reader scrolls, so folds, resizes and Columns/Page switches never move it.
+- The reading line is a sentence and line plus how far into the line the top of the pane sits, with a plain
+  page place as the fallback (scanned pages, or a PDF that was replaced). It is taken only when the reader scrolls, so folds, resizes and Columns/Page switches never move it.
 - Margin ink is stored against the line it sits beside, measured out from the page edge, up to 520 points.
   Each paper keeps a left and a right margin. Swap sides changes which one is in use; notes stay where they were written,
   and ink in the hidden margin shows as an "ink" tab. Ink past the closed-phone band shows a "more" tab. Close tabs merge.

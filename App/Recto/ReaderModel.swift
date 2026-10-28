@@ -56,8 +56,8 @@ final class ReaderModel {
 
     /// Until text selection lands, a quick way to try Quote cards: quote the line at the top.
     func quoteTopLine() {
-        guard let pos = state.position else { return }
-        state.quote(wordIDs: state.text.lines[pos.lineID].wordIDs)
+        guard let id = state.position?.lineID else { return }
+        state.quote(wordIDs: state.text.lines[id].wordIDs)
         save()
     }
 
