@@ -13,6 +13,10 @@ public struct ReaderState: Sendable {
     public private(set) var layout: ContentLayout
     public private(set) var scrollY: CGFloat = 0
 
+    /// Same paper: the facing page's own layout and scroll, when it shows a second view of this paper.
+    public private(set) var facingLayout: ContentLayout?
+    public private(set) var facingScrollY: CGFloat = 0
+
     public var writeMode = false
     public var tool: PaperTool = .pen
     public var color: InkColor = .blue
@@ -76,6 +80,7 @@ public struct ReaderState: Sendable {
 
     private mutating func relayout(_ change: (inout ReaderState) -> Void) {
         let saved = position
+        let savedFacing = facingPosition
         change(&self)
         surface = Surface(environment: environment, settings: settings)
         layout = ContentLayout(text: text, view: surface.view, width: surface.paper.width)
@@ -83,6 +88,53 @@ public struct ReaderState: Sendable {
             scrollY = max(0, y)
             record.position = saved
         }
+        // Same paper gets its own strip, sized to the facing page, at its own place.
+        if settings.facing == .samePaper, let face = surface.facing, face.width > 0 {
+            let fl = ContentLayout(text: text, view: PaperView.automatic(forPaneWidth: face.width), width: face.width)
+            facingLayout = fl
+            let start = savedFacing ?? saved
+            facingScrollY = max(0, start.flatMap { $0.scrollY(text: text, layout: fl) } ?? 0)
+            record.facingPosition = start
+        } else {
+            facingLayout = nil
+        }
+    }
+
+    // MARK: Same paper
+
+    /// The facing page as a second window onto the same marks.
+    public var facingViewport: PaperViewport? {
+        guard let fl = facingLayout, let face = surface.facing else { return nil }
+        var s = surface
+        s.paper = face
+        s.margin = nil
+        return PaperViewport(text: text, layout: fl, surface: s, scrollY: facingScrollY)
+    }
+
+    public var facingPosition: ReadingPosition? {
+        guard let fl = facingLayout else { return record.facingPosition }
+        return record.facingPosition ?? ReadingPosition.capture(text: text, layout: fl, scrollY: facingScrollY)
+    }
+
+    public mutating func scrollFacing(to y: CGFloat) {
+        guard let fl = facingLayout, let face = surface.facing else { return }
+        facingScrollY = min(max(0, y), max(0, fl.height - face.height))
+        record.facingPosition = ReadingPosition.capture(text: text, layout: fl, scrollY: facingScrollY)
+    }
+
+    /// Bring here: move the facing page to the line the paper is on.
+    public mutating func bringHere() {
+        guard let pos = position, let fl = facingLayout, let y = pos.scrollY(text: text, layout: fl) else { return }
+        facingScrollY = max(0, y)
+        record.facingPosition = pos
+    }
+
+    /// Send there: move the paper to the line the facing page is on.
+    public mutating func sendThere() {
+        guard let pos = facingPosition, let y = pos.scrollY(text: text, layout: layout) else { return }
+        if let here = position { backStack.append(here) }
+        scrollY = max(0, y)
+        record.position = pos
     }
 
     // MARK: Marks
@@ -90,7 +142,10 @@ public struct ReaderState: Sendable {
     /// A finished pen, highlighter or eraser movement on the paper or the margin, in window points.
     public mutating func finishStroke(_ points: [CGPoint]) {
         guard points.count > 0 else { return }
-        let vp = viewport
+        // A stroke that starts on the Same paper page goes through that page's view. The marks are
+        // the same marks, so it shows on both pages at once.
+        let onFacing = facingViewport.map { $0.surface.paper.contains(points[0]) } ?? false
+        let vp = onFacing ? facingViewport! : viewport
         var edit = Edit<Mark>()
         switch tool {
         case .pen:

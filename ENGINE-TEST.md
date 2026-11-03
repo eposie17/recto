@@ -2,7 +2,7 @@
 
 Goal: prove the reading and margin engine before building screens on it.
 
-**Result: 40 of 40 checks pass** (38 on 26 October, plus 2 added on 28 October) (`swift test` in `RectoCore/`, Swift 6.1 on Linux).
+**Result: 52 of 52 checks pass** (38 on 26 October, 2 added on 28 October, 12 added on 3 November) (`swift test` in `RectoCore/`, Swift 6.1 on Linux).
 
 | Area | What was checked | Result |
 | --- | --- | --- |
@@ -19,6 +19,10 @@ Goal: prove the reading and margin engine before building screens on it.
 | Highlighter | Snaps to the words crossed; misses empty space | Pass |
 | Notebook | Quote cards avoid ink and earlier cards, start a new page when full, never move | Pass |
 | Reading line | Scanned paper with no text keeps its place by page; a replaced PDF falls back to the page place | Pass (added 28 Oct) |
+| Selection | Drag selects words in reading order; tap selects a sentence; menu highlight is one undo | Pass (added 3 Nov) |
+| Quotes | Quote from a selection; tapping the card jumps to the passage; Back returns | Pass (added 3 Nov) |
+| Notebook ink | Pen and eraser on notebook pages, own undo; cards go under ink | Pass (added 3 Nov) |
+| Same paper | Own scroll place; marks show on both pages; Bring here / Send there; both lines kept through a resize; saved | Pass (added 3 Nov) |
 | Saving | Everything round-trips; a file from a newer app version is refused | Pass |
 
 ## What the tests caught and changed
