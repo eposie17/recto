@@ -1,5 +1,7 @@
 import Foundation
+#if canImport(CoreGraphics)
 import CoreGraphics
+#endif
 
 /// What the window gives us. The layout comes only from this, never from the pose or the hinge angle.
 public struct WindowEnvironment: Equatable, Sendable {
