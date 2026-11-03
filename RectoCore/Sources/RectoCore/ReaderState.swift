@@ -122,6 +122,82 @@ public struct ReaderState: Sendable {
         if let e = paperHistory.redo() { record.marks.apply(e) }
     }
 
+    // MARK: Text selection, highlights and quotes
+
+    /// The words picked on the paper, if any. Highlight and Quote act on it.
+    public var selection: ClosedRange<Int>?
+
+    public mutating func select(from a: CGPoint, to b: CGPoint) {
+        selection = TextPicker.range(from: a, to: b, in: viewport)
+    }
+
+    public mutating func selectSentence(at p: CGPoint) {
+        selection = TextPicker.sentence(at: p, in: viewport)
+    }
+
+    /// Highlight from the menu. The same as a pen highlight over the same words.
+    public mutating func highlightSelection() {
+        guard let range = selection else { return }
+        let edit = Edit<Mark>(added: [.highlight(Highlight(wordIDs: range, color: color))])
+        record.marks.apply(edit)
+        paperHistory.record(edit)
+        selection = nil
+    }
+
+    public mutating func quoteSelection() {
+        guard let range = selection else { return }
+        quote(wordIDs: range)
+        selection = nil
+    }
+
+    /// Places the paper jumped from, so Back returns there.
+    public private(set) var backStack: [ReadingPosition] = []
+
+    /// Tapping a Quote card: jump the paper to its passage. Back returns.
+    public mutating func jump(toQuote id: UUID) {
+        for page in record.notebook.pages {
+            guard let block = page.blocks.first(where: { $0.id == id }),
+                  case let .quote(_, words, _) = block.kind else { continue }
+            jump(toWord: words.lowerBound)
+            return
+        }
+    }
+
+    public mutating func jump(toWord id: Int) {
+        guard id >= 0, id < text.words.count,
+              let rect = layout.stripRect(ofLine: text.lines[text.words[id].lineID]) else { return }
+        if let here = position { backStack.append(here) }
+        // Put the passage a little below the top so the line before it shows too.
+        scroll(to: rect.minY - 40)
+    }
+
+    public var canGoBack: Bool { !backStack.isEmpty }
+
+    public mutating func goBack() {
+        guard let pos = backStack.popLast(), let y = pos.scrollY(text: text, layout: layout) else { return }
+        scrollY = max(0, y)
+        record.position = pos
+    }
+
+    // MARK: Notebook ink
+
+    /// A finished pen or eraser movement on a notebook page, in notebook page points.
+    public mutating func finishNotebookStroke(page: Int, points: [CGPoint]) {
+        guard !points.isEmpty else { return }
+        var edit = Edit<NotebookItem>()
+        if tool == .eraser {
+            let pageIndex = min(page, record.notebook.pages.count - 1)
+            for s in record.notebook.pages[pageIndex].strokes where Eraser.touches(points, path: s.points, radius: 10) {
+                edit.removed.append(.stroke(page: pageIndex, s))
+            }
+        } else {
+            edit.added = [.stroke(page: page, NotebookStroke(points: points, color: color, width: penWidth))]
+        }
+        guard !edit.isEmpty else { return }
+        record.notebook.apply(edit)
+        notebookHistory.record(edit)
+    }
+
     public mutating func quote(wordIDs: ClosedRange<Int>) {
         let excerpt = wordIDs.map { text.words[$0].text }.joined(separator: " ")
         let page = text.lines[text.words[wordIDs.lowerBound].lineID].page + 1

@@ -224,13 +224,7 @@ public enum Eraser {
         var groups = Set<UUID>()
         var highlights = Set<UUID>()
         // Does the eraser come within `radius` of a stroke's path (not just its points)?
-        func touches(_ path: [CGPoint]) -> Bool {
-            if path.count == 1 { return pts.contains { hypot($0.x - path[0].x, $0.y - path[0].y) <= radius } }
-            for (a, b) in zip(path, path.dropFirst()) {
-                for p in pts where distance(p, a, b) <= radius { return true }
-            }
-            return false
-        }
+        func touches(_ path: [CGPoint]) -> Bool { Eraser.touches(pts, path: path, radius: radius) }
         for s in marks.pageStrokes where !groups.contains(s.group) {
             if touches(s.points.compactMap { vp.screenPoint(page: s.page, point: $0) }) { groups.insert(s.group) }
         }
@@ -249,6 +243,16 @@ public enum Eraser {
         for g in groups { removed += marks.marks(inGroup: g) }
         removed += marks.highlights.filter { highlights.contains($0.id) }.map(Mark.highlight)
         return Edit(removed: removed)
+    }
+
+    /// Does any eraser point come within `radius` of a path?
+    public static func touches(_ eraser: [CGPoint], path: [CGPoint], radius: CGFloat) -> Bool {
+        guard let first = path.first else { return false }
+        if path.count == 1 { return eraser.contains { hypot($0.x - first.x, $0.y - first.y) <= radius } }
+        for (a, b) in zip(path, path.dropFirst()) {
+            for p in eraser where distance(p, a, b) <= radius { return true }
+        }
+        return false
     }
 
     /// Distance from p to the segment ab.
