@@ -1,4 +1,5 @@
 import Foundation
+import CoreGraphics
 
 // The text of a paper, as read from the PDF text layer.
 // All rects are in page points with the origin at the top left of the page.

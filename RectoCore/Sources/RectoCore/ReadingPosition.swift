@@ -1,4 +1,5 @@
 import Foundation
+import CoreGraphics
 
 /// Where the reader is. Never a scroll distance, so it survives a fold, a resize, and Page/Columns switches.
 ///

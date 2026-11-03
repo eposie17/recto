@@ -1,4 +1,5 @@
 import Foundation
+import CoreGraphics
 
 public enum PaperTool: String, Codable, Sendable { case pen, highlighter, eraser }
 

@@ -1,4 +1,5 @@
 import Foundation
+import CoreGraphics
 @testable import RectoCore
 
 /// A made-up two-column paper laid out like a typical journal page (US Letter, 612 x 792 points).

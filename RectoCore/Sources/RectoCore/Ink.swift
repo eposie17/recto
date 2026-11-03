@@ -1,4 +1,5 @@
 import Foundation
+import CoreGraphics
 
 /// A view of the paper: the strip layout, where it sits on screen and how far it is scrolled.
 public struct PaperViewport: Sendable {

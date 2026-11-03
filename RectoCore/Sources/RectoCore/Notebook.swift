@@ -1,4 +1,5 @@
 import Foundation
+import CoreGraphics
 
 /// Typed notes and Quote cards go on fixed-size notebook pages. Every block keeps its place.
 public struct NotebookStroke: Codable, Equatable, Identifiable, Sendable {

@@ -1,4 +1,5 @@
 import Foundation
+import CoreGraphics
 
 /// Page view shows each printed page at the width of the pane.
 /// Columns view crops each printed column and stacks the crops, so the type reads larger

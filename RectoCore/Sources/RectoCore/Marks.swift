@@ -1,4 +1,5 @@
 import Foundation
+import CoreGraphics
 
 /// Paper ink comes in four colours so no stroke hides in the black text. Notebook adds black.
 public enum InkColor: String, Codable, CaseIterable, Sendable {
