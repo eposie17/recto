@@ -128,9 +128,15 @@ public enum ColumnDetector {
         }
         guard let b = best, CGFloat(b.count) <= CGFloat(rects.count) * 0.15 else { return nil }
         let gap = (runStart + b.x) / 2
-        let left = rects.filter { $0.maxX <= gap }.count
-        let right = rects.filter { $0.minX >= gap }.count
-        return left >= 3 && right >= 3 ? gap : nil
+        let leftRects = rects.filter { $0.maxX <= gap }, rightRects = rects.filter { $0.minX >= gap }
+        guard leftRects.count >= 3, rightRects.count >= 3 else { return nil }
+        // A caption or heading a bit wider than its column can narrow the empty stretch and push
+        // the gap off center. Put it midway between where most left lines end and the right
+        // column starts, so such a line counts as running across both columns.
+        let ends = leftRects.map(\.maxX).sorted()
+        let leftEdge = ends[Int(Double(ends.count - 1) * 0.9)]
+        let rightStart = rightRects.map(\.minX).min()!
+        return leftEdge < rightStart ? (leftEdge + rightStart) / 2 : gap
     }
 
     /// Crops in reading order: full-width bands, and pairs of column crops for two-column bands.
@@ -221,7 +227,10 @@ public enum ColumnDetector {
             // Keep reading order inside the band as the PDF gave it.
             let ordered = band.ids.sorted()
             if band.spanning {
-                out.append((CGRect(x: minX, y: top, width: maxX - minX, height: bottom - top), ordered))
+                // Full-width bands hold the figures, which can stick out a little past the text,
+                // so they get more room on each side.
+                let x0 = max(0, minX - 2 * pad), x1 = min(page.size.width, maxX + 2 * pad)
+                out.append((CGRect(x: x0, y: top, width: x1 - x0, height: bottom - top), ordered))
             } else {
                 let left = ordered.filter { lines[$0].rect.maxX <= gap }
                 let right = ordered.filter { lines[$0].rect.minX >= gap }

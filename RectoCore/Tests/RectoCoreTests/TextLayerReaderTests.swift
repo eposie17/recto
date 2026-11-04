@@ -113,7 +113,11 @@ extension PDFKitPaperTests {
         let crops = ColumnDetector.crops(page: t.pages[1], lines: t.lines)
         let full = crops.filter { $0.0.width > 400 }
         XCTAssertFalse(full.isEmpty)
-        // The figure frame runs to the right margin (60 points in on a 612-point page).
-        for c in full { XCTAssertGreaterThanOrEqual(c.0.maxX, 612 - 60 + 3) }
+        // The figure frame sticks out to 564 points on a 612-point page.
+        for c in full { XCTAssertGreaterThanOrEqual(c.0.maxX, 564 + 3) }
+        // The caption is a bit wider than a column; it reads across, not cut at the column edge.
+        let caption = t.pages[1].lineIDs.first { t.words[t.lines[$0].wordIDs.lowerBound].text == "Figure" }!
+        let holder = crops.first { $0.1.contains(caption) }!
+        XCTAssertGreaterThanOrEqual(holder.0.maxX, t.lines[caption].rect.maxX)
     }
 }
