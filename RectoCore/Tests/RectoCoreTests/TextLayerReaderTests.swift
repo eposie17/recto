@@ -89,3 +89,31 @@ final class PDFKitPaperTests: XCTestCase {
         XCTAssertEqual(layout.pieces.flatMap(\.lineIDs).sorted(), Array(0..<Self.text.lines.count))
     }
 }
+
+extension PDFKitPaperTests {
+    /// Seen on the simulator: the right column showed larger and further in than the left one,
+    /// and the wide figure's right edge was cut off.
+    func testColumnsShowAtTheSameSizeAndIndent() {
+        let t = Self.text
+        for p in t.pages.indices {
+            let crops = ColumnDetector.crops(page: t.pages[p], lines: t.lines)
+            let gap = ColumnDetector.gapX(page: t.pages[p], lines: t.lines)!
+            let left = crops.filter { $0.0.maxX <= gap + 1 && !$0.1.isEmpty }
+            let right = crops.filter { $0.0.minX >= gap - 1 && !$0.1.isEmpty }
+            XCTAssertFalse(left.isEmpty); XCTAssertFalse(right.isEmpty)
+            let widths = Set((left + right).map { ($0.0.width * 10).rounded() })
+            XCTAssertEqual(widths.count, 1, "page \(p + 1): column crops differ in width")
+            func indent(_ c: (CGRect, [Int])) -> CGFloat { c.1.map { t.lines[$0].rect.minX }.min()! - c.0.minX }
+            for c in left + right { XCTAssertEqual(indent(c), indent(left[0]), accuracy: 3, "page \(p + 1)") }
+        }
+    }
+
+    func testWideFigureCropReachesTheRightMargin() {
+        let t = Self.text
+        let crops = ColumnDetector.crops(page: t.pages[1], lines: t.lines)
+        let full = crops.filter { $0.0.width > 400 }
+        XCTAssertFalse(full.isEmpty)
+        // The figure frame runs to the right margin (60 points in on a 612-point page).
+        for c in full { XCTAssertGreaterThanOrEqual(c.0.maxX, 612 - 60 + 3) }
+    }
+}

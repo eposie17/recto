@@ -159,7 +159,15 @@ public enum ColumnDetector {
             else { groups.append((spanning, [id])) }
         }
         let all = ids.reduce(CGRect.null) { $0.union(lines[$1].rect) }
-        let minX = max(0, all.minX - pad), maxX = min(page.size.width, all.maxX + pad)
+        // Ragged-right text stops short of the right margin, but figures reach it. Pages have even
+        // margins, so the right edge is at least as far in as the left one.
+        let minX = max(0, all.minX - pad)
+        let maxX = min(page.size.width, max(all.maxX + pad, page.size.width - minX))
+        // Both column crops get the same width, so both columns show at the same size and line up.
+        let leftIDs = ids.filter { lines[$0].rect.maxX <= gap }, rightIDs = ids.filter { lines[$0].rect.minX >= gap }
+        let leftEnd = min(gap, (leftIDs.map { lines[$0].rect.maxX }.max() ?? gap) + pad)
+        let rightStart = max(gap, (rightIDs.map { lines[$0].rect.minX }.min() ?? gap) - pad)
+        let columnWidth = min(max(leftEnd - minX, maxX - rightStart), rightStart - minX, maxX - leftEnd)
         // A tall stretch with no text in either column is almost always a wide figure or table.
         // Give it its own full-width crop so it is not cut into two column halves.
         var split: [(spanning: Bool, ids: [Int], hole: CGRect?)] = []
@@ -217,8 +225,8 @@ public enum ColumnDetector {
             } else {
                 let left = ordered.filter { lines[$0].rect.maxX <= gap }
                 let right = ordered.filter { lines[$0].rect.minX >= gap }
-                if !left.isEmpty { out.append((CGRect(x: minX, y: top, width: gap - minX, height: bottom - top), left)) }
-                if !right.isEmpty { out.append((CGRect(x: gap, y: top, width: maxX - gap, height: bottom - top), right)) }
+                if !left.isEmpty { out.append((CGRect(x: minX, y: top, width: columnWidth, height: bottom - top), left)) }
+                if !right.isEmpty { out.append((CGRect(x: maxX - columnWidth, y: top, width: columnWidth, height: bottom - top), right)) }
             }
         }
         return out
