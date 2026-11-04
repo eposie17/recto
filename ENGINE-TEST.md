@@ -2,7 +2,7 @@
 
 Goal: prove the reading and margin engine before building screens on it.
 
-**Result: 52 of 52 checks pass** (38 on 26 October, 2 added on 28 October, 12 added on 3 November) (`swift test` in `RectoCore/`, Swift 6.1 on Linux).
+**Result: 62 of 62 checks pass** (38 on 26 October, 2 added on 28 October, 12 added on 3 November, 10 added on 4 November from the first iPhone simulator run) (`swift test` in `RectoCore/`, Swift 6.1 on Linux).
 
 | Area | What was checked | Result |
 | --- | --- | --- |

@@ -2,7 +2,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 @main
-struct RectoApp: App {
+struct PagesideApp: App {
     var body: some Scene {
         WindowGroup {
             LibraryView()
@@ -24,7 +24,7 @@ struct LibraryView: View {
                         .frame(minHeight: 44)
                 }
             }
-            .navigationTitle("Recto")
+            .navigationTitle("Pageside")
             .toolbar {
                 Button { importing = true } label: { Label("Import PDF", systemImage: "plus") }
             }

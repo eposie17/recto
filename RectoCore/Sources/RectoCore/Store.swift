@@ -1,6 +1,6 @@
 import Foundation
 
-/// Everything Recto saves for one paper, written next to the PDF as JSON.
+/// Everything Pageside saves for one paper, written next to the PDF as JSON.
 /// The PDF itself is never changed until export.
 public struct PaperRecord: Codable, Equatable, Sendable {
     public static let currentVersion = 1

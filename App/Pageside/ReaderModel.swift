@@ -25,7 +25,14 @@ final class ReaderModel {
 
     static func recordURL(for pdf: URL) -> URL {
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        return docs.appendingPathComponent(pdf.deletingPathExtension().lastPathComponent + ".recto.json")
+        let name = pdf.deletingPathExtension().lastPathComponent
+        let url = docs.appendingPathComponent(name + ".pageside.json")
+        // Notes saved before the rename used the old name; move them over once.
+        let old = docs.appendingPathComponent(name + ".recto.json")
+        if !FileManager.default.fileExists(atPath: url.path), FileManager.default.fileExists(atPath: old.path) {
+            try? FileManager.default.moveItem(at: old, to: url)
+        }
+        return url
     }
 
     // MARK: Changes from the views
