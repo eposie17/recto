@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(CoreGraphics)
+import CoreGraphics
+#endif
 
 /// Picking text on the paper: a tap takes a sentence, a drag takes the words between its ends.
 public enum TextPicker {
