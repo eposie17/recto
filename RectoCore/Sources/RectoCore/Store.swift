@@ -9,6 +9,8 @@ public struct PaperRecord: Codable, Equatable, Sendable {
     public var marks = PaperMarks()
     public var notebook = Notebook()
     public var position: ReadingPosition?
+    /// Where the Same paper page is, kept separately so each page has its own place.
+    public var facingPosition: ReadingPosition?
     public var viewChoice: PaperView?
     public var notesSide: MarginSide = .right
 
