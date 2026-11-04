@@ -128,9 +128,15 @@ public enum ColumnDetector {
         }
         guard let b = best, CGFloat(b.count) <= CGFloat(rects.count) * 0.15 else { return nil }
         let gap = (runStart + b.x) / 2
-        let left = rects.filter { $0.maxX <= gap }.count
-        let right = rects.filter { $0.minX >= gap }.count
-        return left >= 3 && right >= 3 ? gap : nil
+        let leftRects = rects.filter { $0.maxX <= gap }, rightRects = rects.filter { $0.minX >= gap }
+        guard leftRects.count >= 3, rightRects.count >= 3 else { return nil }
+        // A caption or heading a bit wider than its column can narrow the empty stretch and push
+        // the gap off center. Put it midway between where most left lines end and the right
+        // column starts, so such a line counts as running across both columns.
+        let ends = leftRects.map(\.maxX).sorted()
+        let leftEdge = ends[Int(Double(ends.count - 1) * 0.9)]
+        let rightStart = rightRects.map(\.minX).min()!
+        return leftEdge < rightStart ? (leftEdge + rightStart) / 2 : gap
     }
 
     /// Crops in reading order: full-width bands, and pairs of column crops for two-column bands.
@@ -149,8 +155,9 @@ public enum ColumnDetector {
             var spanning = r.minX < gap && r.maxX > gap
             // The short last line of a full-width paragraph (an abstract, a caption) belongs to it:
             // it sits at normal line spacing under a full-width line and nothing follows it closely.
+            // Text extractors differ on line box heights, so allow up to one and a half lines of space.
             if !spanning, let last = groups.last, last.spanning,
-               r.minY - lines[last.ids[last.ids.count - 1]].rect.maxY < r.height * 0.8 {
+               r.minY - lines[last.ids[last.ids.count - 1]].rect.maxY < r.height * 1.5 {
                 let next = k + 1 < ids.count ? lines[ids[k + 1]].rect : nil
                 if next == nil || next!.minY - r.maxY > r.height * 0.8 { spanning = true }
             }
@@ -158,7 +165,15 @@ public enum ColumnDetector {
             else { groups.append((spanning, [id])) }
         }
         let all = ids.reduce(CGRect.null) { $0.union(lines[$1].rect) }
-        let minX = max(0, all.minX - pad), maxX = min(page.size.width, all.maxX + pad)
+        // Ragged-right text stops short of the right margin, but figures reach it. Pages have even
+        // margins, so the right edge is at least as far in as the left one.
+        let minX = max(0, all.minX - pad)
+        let maxX = min(page.size.width, max(all.maxX + pad, page.size.width - minX))
+        // Both column crops get the same width, so both columns show at the same size and line up.
+        let leftIDs = ids.filter { lines[$0].rect.maxX <= gap }, rightIDs = ids.filter { lines[$0].rect.minX >= gap }
+        let leftEnd = min(gap, (leftIDs.map { lines[$0].rect.maxX }.max() ?? gap) + pad)
+        let rightStart = max(gap, (rightIDs.map { lines[$0].rect.minX }.min() ?? gap) - pad)
+        let columnWidth = min(max(leftEnd - minX, maxX - rightStart), rightStart - minX, maxX - leftEnd)
         // A tall stretch with no text in either column is almost always a wide figure or table.
         // Give it its own full-width crop so it is not cut into two column halves.
         var split: [(spanning: Bool, ids: [Int], hole: CGRect?)] = []
@@ -178,6 +193,25 @@ public enum ColumnDetector {
             }
             split.append((false, current, nil))
         }
+        // A line or two in one column, alone between a full-width band and empty space, is the
+        // tail of that full-width paragraph (a short last line the rule above missed). Keep it with
+        // the paragraph, and let the paragraph's band take the empty space below it, so the reader
+        // never sees one line cut out at column size followed by a blank crop.
+        var i = 1
+        while i < split.count {
+            let seg = split[i]
+            let prevIsText = split[i - 1].spanning && split[i - 1].hole == nil && !split[i - 1].ids.isEmpty
+            let nextIsGap = i + 1 == split.count || split[i + 1].hole != nil
+            let oneColumn = seg.ids.allSatisfy { lines[$0].rect.maxX <= gap }
+                || seg.ids.allSatisfy { lines[$0].rect.minX >= gap }
+            if !seg.spanning, prevIsText, nextIsGap, seg.ids.count <= 2, oneColumn {
+                split[i - 1].ids += seg.ids
+                split.remove(at: i)
+                if i < split.count, split[i].hole != nil { split.remove(at: i) }
+                continue
+            }
+            i += 1
+        }
         let bands = split.map { (spanning: $0.spanning, ids: $0.ids) }
         var out: [(CGRect, [Int])] = []
         let boxes = split.map { b in b.hole ?? b.ids.reduce(CGRect.null) { $0.union(lines[$1].rect) } }
@@ -193,12 +227,15 @@ public enum ColumnDetector {
             // Keep reading order inside the band as the PDF gave it.
             let ordered = band.ids.sorted()
             if band.spanning {
-                out.append((CGRect(x: minX, y: top, width: maxX - minX, height: bottom - top), ordered))
+                // Full-width bands hold the figures, which can stick out a little past the text,
+                // so they get more room on each side.
+                let x0 = max(0, minX - 2 * pad), x1 = min(page.size.width, maxX + 2 * pad)
+                out.append((CGRect(x: x0, y: top, width: x1 - x0, height: bottom - top), ordered))
             } else {
                 let left = ordered.filter { lines[$0].rect.maxX <= gap }
                 let right = ordered.filter { lines[$0].rect.minX >= gap }
-                if !left.isEmpty { out.append((CGRect(x: minX, y: top, width: gap - minX, height: bottom - top), left)) }
-                if !right.isEmpty { out.append((CGRect(x: gap, y: top, width: maxX - gap, height: bottom - top), right)) }
+                if !left.isEmpty { out.append((CGRect(x: minX, y: top, width: columnWidth, height: bottom - top), left)) }
+                if !right.isEmpty { out.append((CGRect(x: maxX - columnWidth, y: top, width: columnWidth, height: bottom - top), right)) }
             }
         }
         return out

@@ -3,6 +3,8 @@ import RectoCore
 
 struct ReaderView: View {
     @State var model: ReaderModel
+    /// Back to the library. It lives in the bar with the other buttons so it never covers the paper.
+    var onClose: () -> Void = {}
     @State private var foldOverride: FoldOverride = .system
     @Environment(\.scenePhase) private var scenePhase
 
@@ -78,10 +80,13 @@ struct ReaderView: View {
     // MARK: Bars
 
     private var topBar: some View {
-        HStack(spacing: 4) {
-            barButtons(compact: false)
+        // Scrolls sideways if a narrow phone cannot fit every button.
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 4) {
+                barButtons(compact: false)
+            }
+            .padding(.horizontal, 8)
         }
-        .padding(.horizontal, 8)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .background(.bar)
     }
@@ -96,6 +101,10 @@ struct ReaderView: View {
     @ViewBuilder private func barButtons(compact: Bool) -> some View {
         let st = model.state
         let single = st.surface.arrangement == .single
+        BarButton(title: "Library", icon: "books.vertical", compact: compact) {
+            model.save()
+            onClose()
+        }
         BarButton(title: st.writeMode ? "Done" : "Write", icon: st.writeMode ? "checkmark" : "pencil.tip", compact: compact) {
             model.toggleWrite()
         }

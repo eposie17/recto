@@ -33,11 +33,7 @@ struct LibraryView: View {
                 if let copy = LibraryView.copyIn(url) { papers = LibraryView.load(); open = ReaderModel(url: copy) }
             }
             .fullScreenCover(item: $open) { model in
-                ReaderView(model: model)
-                    .overlay(alignment: .topTrailing) {
-                        Button { open = nil } label: { Label("Library", systemImage: "books.vertical").frame(minHeight: 44) }
-                            .padding(.trailing, 8)
-                    }
+                ReaderView(model: model, onClose: { open = nil })
             }
         }
     }
