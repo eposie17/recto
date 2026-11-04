@@ -36,6 +36,32 @@ final class RealPaperTests: XCTestCase {
         XCTAssertEqual(firstWords, ["Notes"])
     }
 
+    /// The same first page with the abstract's short last line pushed down, the way another text
+    /// extractor (PDFKit on the iPhone) can report it. Seen on the simulator: that line came out
+    /// alone at column size, followed by a blank crop, before Section 1.
+    func testShortLastAbstractLineStaysWithTheAbstract() {
+        for push in [CGFloat(4), 9, 14, 30] {
+            let page = Self.firstPage(pushingShortAbstractLineBy: push)
+            let crops = ColumnDetector.crops(page: page.pages[0], lines: page.lines)
+            XCTAssertEqual(crops.count, 3, "push \(push): title and abstract, then two columns")
+            let short = page.lines.first { page.words[$0.wordIDs.lowerBound].text == "reader" && $0.page == 0 }!
+            XCTAssert(crops[0].1.contains(short.id), "push \(push): the short line is in the abstract's crop")
+            XCTAssertEqual(crops[0].0.width, crops.map(\.0.width).max(), "push \(push): first crop is full width")
+        }
+    }
+
+    /// Page 1 of the test paper with its sixth line (the abstract's short last line) moved down.
+    static func firstPage(pushingShortAbstractLineBy push: CGFloat) -> DocumentText {
+        let url = Bundle.module.url(forResource: "test-paper", withExtension: "json", subdirectory: "Resources")!
+        let raw = try! JSONDecoder().decode(Raw.self, from: Data(contentsOf: url))
+        let lines = raw.pages[0].enumerated().map { i, line in
+            line.map { w -> (String, CGRect) in
+                (w.t, CGRect(x: w.r[0], y: w.r[1] + (i == 6 ? push : 0), width: w.r[2], height: w.r[3]))
+            }
+        }
+        return DocumentText(pageSizes: [CGSize(width: raw.sizes[0][0], height: raw.sizes[0][1])], linesPerPage: [lines])
+    }
+
     func testWideFigureStaysWholeInOneCrop() throws {
         let crops = ColumnDetector.crops(page: text.pages[1], lines: text.lines)
         XCTAssertEqual(crops.count, 5, "columns, caption band with the figure, columns")

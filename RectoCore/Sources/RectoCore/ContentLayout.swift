@@ -149,8 +149,9 @@ public enum ColumnDetector {
             var spanning = r.minX < gap && r.maxX > gap
             // The short last line of a full-width paragraph (an abstract, a caption) belongs to it:
             // it sits at normal line spacing under a full-width line and nothing follows it closely.
+            // Text extractors differ on line box heights, so allow up to one and a half lines of space.
             if !spanning, let last = groups.last, last.spanning,
-               r.minY - lines[last.ids[last.ids.count - 1]].rect.maxY < r.height * 0.8 {
+               r.minY - lines[last.ids[last.ids.count - 1]].rect.maxY < r.height * 1.5 {
                 let next = k + 1 < ids.count ? lines[ids[k + 1]].rect : nil
                 if next == nil || next!.minY - r.maxY > r.height * 0.8 { spanning = true }
             }
@@ -177,6 +178,25 @@ public enum ColumnDetector {
                 coveredTo = max(coveredTo, r.maxY)
             }
             split.append((false, current, nil))
+        }
+        // A line or two in one column, alone between a full-width band and empty space, is the
+        // tail of that full-width paragraph (a short last line the rule above missed). Keep it with
+        // the paragraph, and let the paragraph's band take the empty space below it, so the reader
+        // never sees one line cut out at column size followed by a blank crop.
+        var i = 1
+        while i < split.count {
+            let seg = split[i]
+            let prevIsText = split[i - 1].spanning && split[i - 1].hole == nil && !split[i - 1].ids.isEmpty
+            let nextIsGap = i + 1 == split.count || split[i + 1].hole != nil
+            let oneColumn = seg.ids.allSatisfy { lines[$0].rect.maxX <= gap }
+                || seg.ids.allSatisfy { lines[$0].rect.minX >= gap }
+            if !seg.spanning, prevIsText, nextIsGap, seg.ids.count <= 2, oneColumn {
+                split[i - 1].ids += seg.ids
+                split.remove(at: i)
+                if i < split.count, split[i].hole != nil { split.remove(at: i) }
+                continue
+            }
+            i += 1
         }
         let bands = split.map { (spanning: $0.spanning, ids: $0.ids) }
         var out: [(CGRect, [Int])] = []
