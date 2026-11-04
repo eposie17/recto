@@ -16,49 +16,19 @@ enum PDFText {
         return DocumentText(pageSizes: sizes, linesPerPage: pages)
     }
 
+    /// The page's characters with their boxes, flipped to a top-left origin. RectoCore turns
+    /// them into words and lines (TextLayerReader), so the rules are tested on Linux too.
     private static func lines(on page: PDFPage, box: CGRect) -> [[(String, CGRect)]] {
         guard let text = page.string as NSString?, text.length > 0 else { return [] }
-        var lines: [[(String, CGRect)]] = []
-        var line: [(String, CGRect)] = []
-        var word = ""
-        var wordRect = CGRect.null
-
-        func flip(_ r: CGRect) -> CGRect {
-            CGRect(x: r.minX - box.minX, y: box.maxY - r.maxY, width: r.width, height: r.height)
-        }
-        func endWord() {
-            guard !word.isEmpty, !wordRect.isNull else { word = ""; wordRect = .null; return }
-            let r = flip(wordRect)
-            if let last = line.last {
-                // A new line when the baseline moves or the text jumps back to the left.
-                let sameRow = abs(last.1.midY - r.midY) < max(last.1.height, r.height) * 0.5
-                if !sameRow || r.minX < last.1.minX { endLine() }
-            }
-            line.append((word, r))
-            word = ""; wordRect = .null
-        }
-        func endLine() {
-            if !line.isEmpty { lines.append(line) }
-            line = []
-        }
-
+        var glyphs: [TextLayerReader.Glyph] = []
+        glyphs.reserveCapacity(text.length)
         for i in 0..<text.length {
-            let c = text.character(at: i)
-            let isSpace = c == 0x20 || c == 0x09 || c == 0xA0
-            let isBreak = c == 0x0A || c == 0x0D
-            if isSpace || isBreak {
-                endWord()
-                if isBreak { endLine() }
-                continue
-            }
-            let b = page.characterBounds(at: i)
-            guard b.width > 0 || b.height > 0 else { continue }
-            if let u = UnicodeScalar(c) { word.unicodeScalars.append(u) }
-            wordRect = wordRect.union(b)
+            let r = page.characterBounds(at: i)
+            let flipped = r.isNull || (r.width == 0 && r.height == 0) ? CGRect.null
+                : CGRect(x: r.minX - box.minX, y: box.maxY - r.maxY, width: r.width, height: r.height)
+            glyphs.append(TextLayerReader.Glyph(code: text.character(at: i), rect: flipped))
         }
-        endWord()
-        endLine()
-        return lines
+        return TextLayerReader.lines(glyphs)
     }
 }
 
