@@ -44,3 +44,48 @@ final class TextLayerReaderTests: XCTestCase {
         XCTAssertEqual(TextLayerReader.lines(g).count, 2)
     }
 }
+
+/// The sample paper as PDFKit gives it on Apple devices (tools/dump_pdf_text.swift, run on the Mac).
+final class PDFKitPaperTests: XCTestCase {
+    struct Raw: Decodable { let sizes: [[CGFloat]]; let glyphs: [[[CGFloat]]] }
+
+    static let text: DocumentText = {
+        let url = Bundle.module.url(forResource: "pdfkit-glyphs", withExtension: "json", subdirectory: "Resources")!
+        let raw = try! JSONDecoder().decode(Raw.self, from: Data(contentsOf: url))
+        let pages = raw.glyphs.map { page -> [[(String, CGRect)]] in
+            let codes = page.map { UInt16($0[0]) }
+            let bounds = page.map { $0[3] == 0 && $0[4] == 0 ? CGRect.null : CGRect(x: $0[1], y: $0[2], width: $0[3], height: $0[4]) }
+            return TextLayerReader.lines(TextLayerReader.glyphs(codes: codes, bounds: bounds))
+        }
+        return DocumentText(pageSizes: raw.sizes.map { CGSize(width: $0[0], height: $0[1]) }, linesPerPage: pages)
+    }()
+
+    func lineText(_ id: Int) -> String {
+        Self.text.lines[id].wordIDs.map { Self.text.words[$0].text }.joined(separator: " ")
+    }
+
+    func testLinesMatchThePrintedLines() {
+        let t = Self.text
+        let first = t.pages[0].lineIDs.prefix(8).map(lineText)
+        XCTAssertEqual(first[0], "Notes Beside the Line: A Study of Facing Pages")
+        XCTAssertEqual(first[1], "Posi Example and A. N. Other")
+        XCTAssert(first[2].hasPrefix("Abstract. Fold beside"), first[2])
+        XCTAssertEqual(first[6], "reader of page the who same (see Fig. 2 and Eq. 3).")
+        XCTAssertEqual(first[7], "1 Section 1")
+        // Every word is narrower than a column: none runs across a line break.
+        XCTAssert(t.words.allSatisfy { $0.rect.width < 120 }, "a word spans lines")
+    }
+
+    func testFirstPageReadsTitleAbstractThenColumns() {
+        let t = Self.text
+        let crops = ColumnDetector.crops(page: t.pages[0], lines: t.lines)
+        XCTAssertEqual(crops.count, 3, "title and abstract, then two columns")
+        XCTAssertEqual(crops[0].1.count, 7, "title, authors and all five abstract lines")
+        XCTAssertNotNil(ColumnDetector.gapX(page: t.pages[1], lines: t.lines))
+    }
+
+    func testEveryLineIsShownOnceInColumns() {
+        let layout = ContentLayout(text: Self.text, view: .columns, width: 330)
+        XCTAssertEqual(layout.pieces.flatMap(\.lineIDs).sorted(), Array(0..<Self.text.lines.count))
+    }
+}

@@ -17,6 +17,39 @@ public enum TextLayerReader {
         public init(code: UInt16, rect: CGRect) { self.code = code; self.rect = rect }
     }
 
+    /// Pairs each character of the page text with its box.
+    ///
+    /// PDFKit's `characterBounds(at:)` can count characters differently from `page.string`: on the
+    /// iPhone it skips the line breaks PDFKit adds to the string, so every box after the first line
+    /// belonged to a character further on. Both ways of counting are tried, and the one where
+    /// spaces line up with empty boxes wins.
+    public static func glyphs(codes: [UInt16], bounds: [CGRect]) -> [Glyph] {
+        func isBreak(_ c: UInt16) -> Bool { c == 0x0A || c == 0x0D }
+        func isSpace(_ c: UInt16) -> Bool { c == 0x20 || c == 0x09 || c == 0xA0 }
+        func box(_ j: Int) -> CGRect {
+            guard j >= 0, j < bounds.count else { return .null }
+            let r = bounds[j]
+            return r.isNull || r.height <= 0 ? .null : r
+        }
+        var direct: [Glyph] = [], skipping: [Glyph] = []
+        var breaks = 0
+        for (k, c) in codes.enumerated() {
+            if isBreak(c) {
+                direct.append(Glyph(code: c, rect: .null)); skipping.append(Glyph(code: c, rect: .null))
+                breaks += 1
+                continue
+            }
+            direct.append(Glyph(code: c, rect: box(k)))
+            skipping.append(Glyph(code: c, rect: box(k - breaks)))
+        }
+        func misses(_ gs: [Glyph]) -> Int {
+            gs.reduce(0) { n, g in
+                isBreak(g.code) ? n : n + ((isSpace(g.code) != g.rect.isNull) ? 1 : 0)
+            }
+        }
+        return misses(skipping) < misses(direct) ? skipping : direct
+    }
+
     public static func lines(_ glyphs: [Glyph]) -> [[(String, CGRect)]] {
         var lines: [[(String, CGRect)]] = []
         var line: [(String, CGRect)] = []

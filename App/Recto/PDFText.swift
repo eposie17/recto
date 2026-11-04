@@ -16,19 +16,20 @@ enum PDFText {
         return DocumentText(pageSizes: sizes, linesPerPage: pages)
     }
 
-    /// The page's characters with their boxes, flipped to a top-left origin. RectoCore turns
-    /// them into words and lines (TextLayerReader), so the rules are tested on Linux too.
+    /// The page's characters with their boxes, flipped to a top-left origin. RectoCore pairs
+    /// them up and turns them into words and lines (TextLayerReader), so the rules are tested on
+    /// Linux with real PDFKit data (tools/dump_pdf_text.swift).
     private static func lines(on page: PDFPage, box: CGRect) -> [[(String, CGRect)]] {
         guard let text = page.string as NSString?, text.length > 0 else { return [] }
-        var glyphs: [TextLayerReader.Glyph] = []
-        glyphs.reserveCapacity(text.length)
+        var codes: [UInt16] = [], bounds: [CGRect] = []
+        codes.reserveCapacity(text.length); bounds.reserveCapacity(text.length)
         for i in 0..<text.length {
+            codes.append(text.character(at: i))
             let r = page.characterBounds(at: i)
-            let flipped = r.isNull || (r.width == 0 && r.height == 0) ? CGRect.null
-                : CGRect(x: r.minX - box.minX, y: box.maxY - r.maxY, width: r.width, height: r.height)
-            glyphs.append(TextLayerReader.Glyph(code: text.character(at: i), rect: flipped))
+            bounds.append(r.isNull || (r.width == 0 && r.height == 0) ? .null
+                          : CGRect(x: r.minX - box.minX, y: box.maxY - r.maxY, width: r.width, height: r.height))
         }
-        return TextLayerReader.lines(glyphs)
+        return TextLayerReader.lines(TextLayerReader.glyphs(codes: codes, bounds: bounds))
     }
 }
 
