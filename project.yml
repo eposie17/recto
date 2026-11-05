@@ -1,5 +1,5 @@
-# Generates Recto.xcodeproj. On a Mac: `brew install xcodegen`, then `xcodegen` in this folder.
-name: Recto
+# Generates Pageside.xcodeproj. On a Mac: `brew install xcodegen`, then `xcodegen` in this folder.
+name: Pageside
 options:
   bundleIdPrefix: com.posi
   deploymentTarget:
@@ -8,17 +8,17 @@ packages:
   RectoCore:
     path: RectoCore
 targets:
-  Recto:
+  Pageside:
     type: application
     platform: iOS
     deploymentTarget: "17.0"
     sources:
-      - App/Recto
+      - App/Pageside
     dependencies:
       - package: RectoCore
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.posi.recto
+        PRODUCT_BUNDLE_IDENTIFIER: com.posi.pageside
         TARGETED_DEVICE_FAMILY: "1,2"          # iPhone (and Duo) and iPad only
         SWIFT_VERSION: "5.0"
         GENERATE_INFOPLIST_FILE: YES
@@ -28,13 +28,13 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortraitUpsideDown"
         INFOPLIST_KEY_UISupportsDocumentBrowser: NO
         INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace: YES
-        INFOPLIST_KEY_CFBundleDisplayName: Recto
+        INFOPLIST_KEY_CFBundleDisplayName: Pageside
         MARKETING_VERSION: "0.1"
         CURRENT_PROJECT_VERSION: "1"
 schemes:
-  Recto:
+  Pageside:
     build:
       targets:
-        Recto: all
+        Pageside: all
     test:
       targets: []

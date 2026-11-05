@@ -1,6 +1,6 @@
 // Prints every character of a PDF's text layer with its box, exactly as the app gets them from
 // PDFKit (flipped to a top-left origin), so engine tests can use real Apple data on Linux.
-// Run on a Mac: swift tools/dump_pdf_text.swift App/Recto/Resources/Sample-Paper.pdf > pdfkit-glyphs.json
+// Run on a Mac: swift tools/dump_pdf_text.swift App/Pageside/Resources/Sample-Paper.pdf > pdfkit-glyphs.json
 // Shape: {"sizes": [[w, h]], "glyphs": [[[code, x, y, w, h], ...] per page]}; a glyph with no box has w = h = 0.
 import Foundation
 import PDFKit

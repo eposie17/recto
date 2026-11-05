@@ -1,7 +1,7 @@
-# Recto
+# Pageside
 
 A paper reader with a facing notebook page, for iPhone (including iPhone Duo) and iPad.
-Working name; see the design brief for the open naming question.
+The engine package keeps its working name, RectoCore.
 
 - Design brief: https://claude.ai/artifact/95agJiaLTgiouMH6eGhjzk
 - Clickable mock: https://claude.ai/artifact/Hk9HNmdDghG5Y35WiBVY9u
@@ -11,14 +11,14 @@ Working name; see the design brief for the open naming question.
 | Folder | What it is |
 | --- | --- |
 | `RectoCore/` | The engine, in plain Swift with no screen code: reading text off the page, Columns view, the reading line, the margin notes, the pen rules, undo, the notebook, saving. Fully tested. |
-| `App/Recto/` | A first iPhone and iPad app around the engine (SwiftUI, with UIKit for the paper and pen). |
+| `App/Pageside/` | A first iPhone and iPad app around the engine (SwiftUI, with UIKit for the paper and pen). |
 | `project.yml` | Describes the Xcode project. Generate it with XcodeGen. |
 | `tools/make_test_paper.py` | Makes the realistic two-column test paper used by the tests and bundled as the sample. |
 
 ## Run it (needs a Mac)
 
 1. Install Xcode 27.1 or later (it has the iPhone Duo simulator) and XcodeGen: `brew install xcodegen`.
-2. In this folder run `xcodegen`, then open `Recto.xcodeproj`.
+2. In this folder run `xcodegen`, then open `Pageside.xcodeproj`.
 3. Pick an iPhone Duo, iPhone or iPad simulator and press Run.
 4. Engine tests: open `RectoCore/Package.swift` in Xcode and press Cmd-U, or run `swift test` in `RectoCore/`.
 
@@ -51,7 +51,7 @@ The app opens on a library with a sample paper. Inside a paper:
 
 ## Not done yet
 
-- The Duo's fold is not read from the system yet (`App/Recto/Fold.swift`). Use **Pretend fold** until it is wired up on a Mac.
+- The Duo's fold is not read from the system yet (`App/Pageside/Fold.swift`). Use **Pretend fold** until it is wired up on a Mac.
 - The app shell has not been compiled yet: this build was written on a machine without Xcode. Expect a round of small fixes on first build.
 - Writing in the whole-margin view (laptop pose, closed Notes), ink on notebook pages, text selection, Same paper,
   Figures and tables, Another paper, export, iPad portrait drawer: per the 12-week plan.
